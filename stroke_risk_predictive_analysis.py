@@ -12,14 +12,19 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-"""##**Data Loading**"""
+"""## **Data Loading**"""
 
 stroke_risk = pd.read_csv('/content/drive/MyDrive/healthcare-dataset-stroke-data.csv')
 stroke_risk
 
-"""##**Explanatory Data Analysis (EDA)**"""
+"""## **Explanatory Data Analysis (EDA)**
+
+Untuk memahami struktur dataset stroke_risk, termasuk informasi tentang jumlah baris dan kolom, nama kolom, tipe data masing-masing kolom, serta jumlah nilai non-null di setiap kolom.
+"""
 
 stroke_risk.info()
+
+""" Untuk mendapatkan statistik deskriptif dari kolom numerik di dataset"""
 
 stroke_risk.describe()
 
@@ -34,7 +39,10 @@ numerical_feature = ['age', 'avg_glucose_level', 'bmi']
 print('Fitur kategorikal:', categorical_feature)
 print('Fitur numerikal:', numerical_feature)
 
-"""### Categorical Analysis"""
+"""### Categorical Analysis
+
+Dari plot yang telah dibuat, didapatkan informasi bahwa dataset yang digunakan berisi lebih banyak data yang mengidap stroke dibanding yang normal.
+"""
 
 # Label dan warna untuk stroke
 stroke_label = ['Stroke', 'Normal']
@@ -57,6 +65,8 @@ stroke_pie.set_title(label='Persentase Stroke')
 plt.axis('off')
 
 plt.show()
+
+""" Dari plot yang dibuat, dapat diketahui bahwa distribusi jenis kelamin pada dataset lebih banyak Wanita dibandingkan Pria."""
 
 # Menyesuaikan label berdasarkan nilai unik dalam gender
 gender_labels = stroke_risk['gender'].unique()
@@ -89,6 +99,8 @@ plt.show()
 """### Multivariate Analysis
 
 #### Categorical analysis
+
+Pada *categorical analysis* ini dilakukan pengecekan rata-rata dari tiap fitur kategorikal terhadap stroke
 """
 
 # Analisis Multivariat pada fitur kategorikal terhadap stroke
@@ -122,7 +134,62 @@ plt.show()
 
 """## **Data Preparation**
 
-### Handling Missing Value
+### Check Outlier
+"""
+
+# Visualisasi distribusi data dan outlier
+plt.figure(figsize=(15, 20))
+
+# Kolom-kolom numerik yang relevan untuk dataset stroke prediction
+numerical_columns = ['age', 'avg_glucose_level', 'bmi']
+
+# Visualisasi distplot dan boxplot untuk masing-masing kolom
+for i, column in enumerate(numerical_columns):
+    plt.subplot(len(numerical_columns), 2, i * 2 + 1)
+    sns.histplot(stroke_risk[column], kde=True, color='DeepPink')
+    plt.title(f'Distribusi: {column}')
+
+    plt.subplot(len(numerical_columns), 2, i * 2 + 2)
+    sns.boxplot(x=stroke_risk[column], color='SkyBlue')
+    plt.title(f'Boxplot: {column}')
+
+plt.tight_layout()
+plt.show()
+
+"""### Handling Outlier
+
+Untuk mendeteksi dan menghapus nilai ekstrim (outlier) pada dataset dengan metode IQR (Interquartile Range).
+"""
+
+# Handling Outliers dengan metode IQR
+data_outlier = stroke_risk[numerical_columns]
+
+# Menghitung Q1, Q3, dan IQR
+Q1 = data_outlier.quantile(0.25)
+Q3 = data_outlier.quantile(0.75)
+IQR = Q3 - Q1
+
+# Mendefinisikan batas bawah dan atas
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+
+# Menghapus data stroke_risk
+filtered_data = stroke_risk[
+    ~((data_outlier < lower_bound) | (data_outlier > upper_bound)).any(axis=1)
+]
+
+print(f"Dataset sebelum menghapus outlier: {stroke_risk.shape}")
+print(f"Dataset setelah menghapus outlier: {filtered_data.shape}")
+
+# Menampilkan boxplot setelah outlier dihapus
+plt.figure(figsize=(12, 7))
+sns.boxplot(data=filtered_data[numerical_columns])
+plt.title("Boxplot Setelah Menghapus Outlier")
+plt.show()
+
+"""### Handling Missing Value
+
+Untuk menangani nilai yang tidak valid (misalnya bmi = 0) dengan menggantinya menggunakan nilai median.
 """
 
 stroke_risk.isnull().sum()
@@ -167,7 +234,10 @@ stroke_risk.info()
 fig , ax = plt.subplots(figsize=(13,6))
 sns.heatmap(stroke_risk.corr(), cmap="coolwarm", linecolor='white' , annot=True , linewidths=1 , ax=ax )
 
-"""#### Train Test Split"""
+"""#### Train Test Split
+
+Membagi dataset menjadi dua bagian, yaitu data latih (training set) dan data uji (test set), untuk membangun dan menguji performa model.
+"""
 
 X=stroke_risk.drop('stroke',axis=1)
 Y=stroke_risk['stroke']
@@ -179,7 +249,10 @@ X_train, X_test, Y_train, Y_test=train_test_split(X,Y,test_size=0.2,random_state
 print('Shape dari Xtrain', X_train.shape)
 print('Shape dari Xest', X_test.shape)
 
-"""#### Standarization"""
+"""#### Standarization
+
+Melakukan standardisasi fitur agar berada dalam skala yang sama. Hal ini penting untuk algoritma yang sensitif terhadap skala fitur, seperti SVM, Logistic Regression.
+"""
 
 from sklearn.preprocessing import StandardScaler
 
@@ -187,7 +260,10 @@ std=StandardScaler()
 X_train_std=std.fit_transform(X_train)
 X_test_std=std.transform(X_test)
 
-"""## **Modeling**"""
+"""## **Modeling**
+
+Membuat sebuah DataFrame untuk menyimpan hasil evaluasi performa model pada data latih dan data uji.
+"""
 
 # Membuat dataframe untuk menyimpan hasil evaluasi model
 model = pd.DataFrame(index=['train_mse', 'test_mse'],
@@ -202,7 +278,12 @@ from sklearn.metrics import mean_squared_error, accuracy_score
 # Membuat dataframe untuk menyimpan hasil evaluasi model
 model = pd.DataFrame(index=['train_mse', 'test_mse'], columns=['DecisionTree', 'LogisticRegression', 'SVM'])
 
-"""### Decision Tree"""
+"""### Decision Tree
+
+Melatih model Decision Tree Classifier dan mengevaluasi performanya pada data latih dan data uji menggunakan metrik Mean Squared Error (MSE).
+
+ DecisionTreeClassifier diimpor dari library sklearn.tree. Model ini bekerja dengan membagi dataset menjadi cabang-cabang berdasarkan fitur tertentu untuk membuat keputusan.
+"""
 
 # Decision Tree Classifier
 from sklearn.tree import DecisionTreeClassifier
@@ -212,7 +293,12 @@ dt.fit(X_train_std, Y_train)
 model.loc['train_mse', 'DecisionTree'] = mean_squared_error(Y_train, dt.predict(X_train_std))
 model.loc['test_mse', 'DecisionTree'] = mean_squared_error(Y_test, dt.predict(X_test_std))
 
-"""### Logistic Regression"""
+"""### Logistic Regression
+
+Menerapkan model Logistic Regression untuk melakukan prediksi dan mengevaluasi performanya pada data latih dan data uji menggunakan metrik Mean Squared Error (MSE).
+
+ Model Logistic Regression diimpor dari sklearn.linear_model menggunakan fungsi LogisticRegression. Model ini adalah algoritma klasifikasi yang berbasis probabilitas.
+"""
 
 # Logistic Regression
 from sklearn.linear_model import LogisticRegression
@@ -222,7 +308,12 @@ lr.fit(X_train_std, Y_train)
 model.loc['train_mse', 'LogisticRegression'] = mean_squared_error(Y_train, lr.predict(X_train_std))
 model.loc['test_mse', 'LogisticRegression'] = mean_squared_error(Y_test, lr.predict(X_test_std))
 
-"""### Support Vector Machine (SVM)"""
+"""### Support Vector Machine (SVM)
+
+Mengaplikasikan model Support Vector Machine (SVM) untuk melakukan klasifikasi dan mengevaluasi performa model pada data latih dan data uji dengan menggunakan metrik Mean Squared Error (MSE).
+
+ Model Support Vector Classifier (SVC) diimpor dari modul sklearn.svm. Algoritma SVM bekerja dengan mencari hyperplane terbaik untuk memisahkan kelas dalam data.
+"""
 
 # Support Vector Machine (SVM)
 from sklearn.svm import SVC
@@ -232,7 +323,10 @@ sv.fit(X_train_std, Y_train)
 model.loc['train_mse', 'SVM'] = mean_squared_error(Y_train, sv.predict(X_train_std))
 model.loc['test_mse', 'SVM'] = mean_squared_error(Y_test, sv.predict(X_test_std))
 
-"""### Model Evaluation"""
+"""### Model Evaluation
+
+Menghitung dan membandingkan nilai Mean Squared Error (MSE) dari ketiga model (Decision Tree, Logistic Regression, dan SVM) pada data latih (train) dan data uji (test).
+"""
 
 # Buat dataframe untuk menyimpan MSE pada data train dan test
 mse = pd.DataFrame(columns=['train', 'test'], index=['DecisionTree', 'LogisticRegression', 'SVM'])
@@ -247,6 +341,13 @@ for name, model in model_dict.items():
 
 # Menampilkan MSE
 print(mse)
+
+""" Berdasarkan hasil evaluasi yang didapatkan:
+
+ - DecisionTree memiliki MSE 0 pada data latih
+
+ - LogisticRegression dan SVM memiliki performa yang lebih stabil antara data latih dan data uji, dengan MSE pada data uji lebih rendah dibandingkan Decision Tree.
+"""
 
 # Plot hasil MSE
 import matplotlib.pyplot as plt
@@ -290,3 +391,8 @@ for name, model in model_dict.items():
 
 # Menampilkan hasil prediksi
 pd.DataFrame(pred_dict)
+
+""" Hasil keluaran berupa tabel yang menampilkan perbandingan antara nilai target sebenarnya (y_true) dengan hasil prediksi dari beberapa model (DecisionTree, LogisticRegression, dan SVM).
+
+ Semua model memberikan prediksi 0 untuk ketiga sampel, yang sesuai dengan nilai y_true.
+"""
